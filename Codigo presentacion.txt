@@ -1,0 +1,217 @@
+
+*/ A continuación, se mustra el codigo que se uso para la busqueda con Simulated Annealing y Hill Climbing, esta ultima solo se modifico
+para adaptarse al mismo codigo utilizado por Simulated Annealing. Ademas, se muestran las funciones necesarias las busqueda y explotación
+de arreglos que simulan puestos de feria.
+Las variables definidas son :
+temperatura = 220353;
+temperaturaMin = 10;
+enfriamiento = 0.9999;
+y en caso de la busqueda con Hill Climbing solo se dejaron 100 mil iteraciones.*/
+
+
+
+
+
+//Se importara la biblioteca de ArrayList para almacenar los nodos, ademas de Random para generar soluciones estocasticas
+import java.util.ArrayList;
+import java.util.Random;
+
+
+
+
+public class SimulatedAnnealing {
+
+    //El criterio de metropolis decidira si una solucion peor a la actual pueda ser considerada en la exploracion
+
+     private boolean criterioDeMetropolis(double d1,double d2,double temperatura){
+        double diferencia = d2 - d1;
+        double probabilidad = Math.exp((diferencia/temperatura)*-1);
+        System.out.println("Criterio De metropolis: ");
+        System.out.println("Probabilidad "+ probabilidad);
+        double random = Math.random();
+        System.out.println("Random " + random);
+        //Si la probabilidad es mayor al numero random se aceptara
+        if(probabilidad > random ) {
+            System.out.println("Si se acepta");
+            return true;
+        }
+        else {
+            System.out.println("No se acepta");
+            return false;
+        }
+    }
+
+
+
+
+
+
+    //En este metodo se intercambian las posiciones con un proceso estocastico
+    private int[] swap(int[] arreglo){
+        int random1=0,random2=0;
+        int[] swapArray = new int[arreglo.length];//Se inicializa un nuevo arreglo con el tamaño del que llega por parametros
+    	Random ran = new Random();
+    	
+    	//Se buscan numeros random (desde 1 hasta el largo) hasta que sean distintos	
+        while(random1 == random2){
+            random1 = ran.nextInt((arreglo.length-1)+1);
+            random2 = ran.nextInt((arreglo.length-1)+1);
+        }
+        
+        //Se copian en el nuevo arreglo solo las posiciones distintas random1 y random 2
+        for(int i = 0 ; i < arreglo.length; i++ ){
+            if((random1 != i) && (random2 != i)){
+                swapArray[i] = arreglo[i];
+            }
+        }
+        //Como quedaron vacios las posiciones, ahora se asignan y quedan en lugares diferentes
+        swapArray[random1] = arreglo[random2];
+        swapArray[random2] = arreglo[random1];
+
+        return swapArray;
+    }
+    
+    
+  
+
+
+
+    //En esta funcion se generan soluciones estocasticas para los arreglos a explorar
+    private int[] generarSolucionRandom(int n){
+        int[] arregloEstocastico = new int[n];
+        int random1;
+        ArrayList<Integer> arregloOrdenado = new ArrayList<Integer>();
+        
+        // Se genera un array ordenado de 0 a n
+        for(int i = 0; i < n; i++){
+            arregloOrdenado.add(i);
+        }
+        int cont = 0;
+        //Se van agregando aleatoriamente los valores del arregloOrdenado a arregloEstocastico
+        while(arregloOrdenado.size() > 0) {
+            int size = arregloOrdenado.size();
+            Random ran = new Random();
+            random1 = ran.nextInt((size-1)+1);
+            int numeroEstocastico = random1;
+            arregloEstocastico[cont] = (int)arregloOrdenado.get(numeroEstocastico);
+            arregloOrdenado.remove(numeroEstocastico);
+            cont++;
+        }
+        return arregloEstocastico;
+    }
+    
+    
+    
+
+
+    //Este metodo sera llamado para imprimir los arreglos y las distincias recorridas
+    private void imprimirArreglo(int[] arreglo, double distancia){
+    	
+        for (int i = 0 ; i < arreglo.length ; i++){
+            System.out.print(arreglo[i] + " ");
+        }
+        System.out.println();
+        System.out.println("Distancia recorrida " + distancia);
+    }
+
+
+
+
+
+
+    //Esta es la funciond de busqueda usando Simulated Annealing
+    public int[] buscar(SRFLP srflp,int size,double temperatura, double temperaturaMin,double enfriamento){
+        int iteracion = 1;
+        //Se genera una solucion inicial
+        int[] solucionActual= generarSolucionRandom(size);
+        int[] mejorSolucion= solucionActual;
+        double distanciaRecorrida;
+        //Definimos la distancia recorrida
+        distanciaRecorrida = srflp.getObjectiveFunction(solucionActual);
+        double mejorDistancia = distanciaRecorrida;
+        System.out.println("Primera solución:");
+        imprimirArreglo(solucionActual,distanciaRecorrida);
+        
+        while (temperatura > temperaturaMin) {
+            
+            System.out.println("Iteracion: " + iteracion);
+            //Calculamos la distancia del arreglo
+            distanciaRecorrida = srflp.getObjectiveFunction(solucionActual);
+            imprimirArreglo(solucionActual,distanciaRecorrida);
+            
+            if (mejorDistancia < distanciaRecorrida){
+                if (criterioDeMetropolis(mejorDistancia, distanciaRecorrida, temperatura)) {
+                    solucionActual = swap(solucionActual);  
+                }
+                else {
+                	solucionActual = mejorSolucion;
+                	solucionActual = swap(solucionActual);
+                }
+            }
+            else {
+            	//Se guarda la mejor distancia recorrida
+                mejorDistancia= distanciaRecorrida;
+                mejorSolucion = solucionActual;
+                solucionActual= swap(solucionActual);   
+        	}
+            temperatura = temperatura*enfriamento;
+            iteracion++;
+      
+            System.out.println("---------");
+        }
+
+        System.out.println("La mejor solucion es ");
+        
+        imprimirArreglo(mejorSolucion, mejorDistancia);
+        return mejorSolucion;
+    }
+
+
+
+    //Esta funcion es como la anterior y  fue modificada para aplicar la busqueda con Hill Climbing, aplicando 100mil ciclos
+    public int[] buscar(SRFLP srflp,int size,double temperatura, double temperaturaMin,double enfriamento){
+        int iteracion = 1;
+        //Se genera una solucion inicial
+        int[] solucionActual= generarSolucionRandom(size);
+        int[] mejorSolucion= solucionActual;
+        double distanciaRecorrida;
+        //Definimos la distancia recorrida
+        distanciaRecorrida = srflp.getObjectiveFunction(solucionActual);
+        double mejorDistancia = distanciaRecorrida;
+        System.out.println("Primera solución:");
+        imprimirArreglo(solucionActual,distanciaRecorrida);
+        
+        while (temperatura > 0) {
+            
+            System.out.println("Iteracion: " + iteracion);
+            //Calculamos la distancia del arreglo
+            distanciaRecorrida = srflp.getObjectiveFunction(solucionActual);
+            imprimirArreglo(solucionActual,distanciaRecorrida);
+            
+            if (mejorDistancia < distanciaRecorrida){               
+                solucionActual = mejorSolucion;
+                solucionActual = swap(solucionActual);
+            }
+            else {
+            	//Se guarda la mejor distancia recorrida
+                mejorDistancia= distanciaRecorrida;
+                mejorSolucion = solucionActual;
+                solucionActual= swap(solucionActual);   
+        	}
+            temperatura = temperatura + enfriamento;
+            iteracion++;
+      
+            System.out.println("---------");
+        }
+
+        System.out.println("La mejor solucion de Hill Climbing ");
+        
+    
+        imprimirArreglo(mejorSolucion, mejorDistancia);
+        return mejorSolucion;
+    }
+
+
+
+
+}
